@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR HOUSE • Панель сотрудника</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0d1117; --surface: #161b22; --card: #1c2128; --border: #30363d;
+            --text: #e6edf3; --muted: #8b949e; --purple: #a855f7; --green: #3fb950;
+            --red: #f85149; --yellow: #d2991d; --blue: #58a6ff; --orange: #f0883e;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+        .sidebar { width: 250px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 100; padding: 20px 0; overflow-y: auto; }
+        .logo { padding: 0 20px 18px; border-bottom: 1px solid var(--border); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: 2px; }
+        .logo i { color: var(--purple); font-size: 24px; }
+        .logo span { background: linear-gradient(135deg, #c084fc, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .nav-label { padding: 14px 20px 6px; font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); font-weight: 700; }
+        .nav-item { padding: 10px 20px; display: flex; align-items: center; gap: 10px; color: var(--muted); cursor: pointer; border-left: 3px solid transparent; font-size: 13px; font-weight: 500; transition: 0.15s; user-select: none; }
+        .nav-item:hover { background: var(--card); color: #fff; }
+        .nav-item.active { color: var(--purple); background: rgba(168,85,247,0.08); border-left-color: var(--purple); }
+        .nav-item i { width: 18px; text-align: center; }
+        .nav-badge { margin-left: auto; background: var(--purple); font-size: 10px; padding: 2px 7px; border-radius: 10px; color: #fff; font-weight: 700; }
+        .nav-badge.warn { background: var(--yellow); color: #000; }
+
+        .main { margin-left: 250px; flex: 1; padding: 24px 28px; min-width: 0; }
+        .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+        .topbar h1 { font-size: 22px; font-weight: 700; }
+        .topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .live-clock { background: var(--card); border: 1px solid var(--border); padding: 8px 14px; border-radius: 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+
+        .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; user-select: none; }
+        .btn-purple { background: var(--purple); color: #fff; } .btn-purple:hover { background: #9333ea; }
+        .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); } .btn-outline:hover { border-color: #fff; }
+        .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 6px; }
+        .btn-red { background: transparent; border: 1px solid var(--red); color: var(--red); } .btn-red:hover { background: var(--red); color: #fff; }
+        .btn-green { background: transparent; border: 1px solid var(--green); color: var(--green); } .btn-green:hover { background: var(--green); color: #000; }
+        .btn-yellow { background: transparent; border: 1px solid var(--yellow); color: var(--yellow); } .btn-yellow:hover { background: var(--yellow); color: #000; }
+        .btn-blue { background: transparent; border: 1px solid var(--blue); color: var(--blue); } .btn-blue:hover { background: var(--blue); color: #000; }
+
+        .summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap: 12px; margin-bottom: 24px; }
+        .summary-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+        .summary-card .sc-icon { font-size: 18px; margin-bottom: 6px; }
+        .summary-card .sc-val { font-size: 26px; font-weight: 700; }
+        .summary-card .sc-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+        .sc-green .sc-icon { color: var(--green); } .sc-purple .sc-icon { color: var(--purple); }
+        .sc-yellow .sc-icon { color: var(--yellow); } .sc-blue .sc-icon { color: var(--blue); }
+
+        .section-title { font-size: 17px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px,1fr)); gap: 10px; margin-bottom: 28px; }
+        .eq-card { background: var(--card); border: 2px solid var(--border); border-radius: 10px; padding: 12px 10px; text-align: center; cursor: pointer; transition: 0.2s; min-height: 100px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+        .eq-card:hover { border-color: var(--purple); }
+        .eq-card.ok { border-color: #1f3322; background: #111a13; }
+        .eq-card.issue { border-color: var(--yellow); background: #1f1a0e; }
+        .eq-card i { font-size: 24px; color: var(--muted); }
+        .eq-card.ok i { color: var(--green); } .eq-card.issue i { color: var(--yellow); }
+        .eq-card .eq-name { font-size: 11px; font-weight: 600; }
+        .eq-card .eq-status { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .eq-card.ok .eq-status { color: var(--green); } .eq-card.issue .eq-status { color: var(--yellow); }
+
+        .shift-block { background: var(--card); border: 2px solid var(--green); border-radius: 16px; padding: 28px; text-align: center; margin-bottom: 24px; }
+        .shift-block.inactive { border-color: var(--border); }
+        .shift-block .shift-status-icon { font-size: 48px; margin-bottom: 12px; }
+        .shift-block .shift-status-text { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+
+        .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; margin-bottom: 28px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 12px 18px; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border); }
+        td { padding: 12px 18px; font-size: 13px; border-bottom: 1px solid #1a1f26; }
+
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+        .badge-open { background: rgba(248,81,73,0.15); color: var(--red); }
+        .badge-wait { background: rgba(210,153,29,0.15); color: var(--yellow); }
+        .badge-progress { background: rgba(88,166,255,0.15); color: var(--blue); }
+        .badge-done { background: rgba(63,185,80,0.15); color: var(--green); }
+        .badge-cantfix { background: rgba(240,136,62,0.15); color: var(--orange); }
+
+        /* Календарь */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 16px; }
+        .calendar-day-header { text-align: center; font-size: 11px; color: var(--muted); font-weight: 700; padding: 8px 0; }
+        .calendar-day { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px; min-height: 80px; cursor: pointer; transition: 0.2s; }
+        .calendar-day:hover { border-color: var(--purple); }
+        .calendar-day.other-month { opacity: 0.3; }
+        .calendar-day.today { border-color: var(--purple); box-shadow: 0 0 12px rgba(168,85,247,0.3); }
+        .calendar-day .day-num { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+        .calendar-day .shift-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-right: 2px; }
+        .calendar-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+        .calendar-nav .month-label { font-size: 18px; font-weight: 700; min-width: 180px; text-align: center; }
+
+        .toast { position: fixed; bottom: 24px; right: 24px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 20px; z-index: 999; font-size: 13px; animation: slideUp 0.3s; }
+        .toast.success { border-color: var(--green); } .toast.error { border-color: var(--red); }
+        @keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index:200; display:flex; align-items:center; justify-content:center; }
+        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 500px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
+        .modal h3 { margin-bottom: 16px; font-size: 18px; }
+        .modal .form-group { margin-bottom: 14px; }
+        .modal label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+        .modal select,.modal input,.modal textarea { width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px; outline:none; resize:vertical; }
+        .modal .btn-row { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main" id="mainContent"></main>
+
+    <div class="modal-overlay hidden" id="modalShiftStart">
+        <div class="modal"><h3>🟢 Приход на смену</h3><div class="form-group"><label>Имя сотрудника</label><input type="text" id="inputStaffName" placeholder="Ваше имя"></div><p style="color:var(--muted);font-size:13px;margin-bottom:12px;">💰 900 ₽ + 100 ₽ за каждый час</p><div class="btn-row"><button class="btn btn-outline" id="btnCancelShift">Отмена</button><button class="btn btn-purple" id="btnStartShift">▶ Начать смену</button></div></div>
+    </div>
+    <div class="modal-overlay hidden" id="modalShiftEnd">
+        <div class="modal"><h3>🔴 Завершение смены</h3><div id="shiftEndInfo"></div><div class="btn-row"><button class="btn btn-outline" id="btnCancelShiftEnd">Отмена</button><button class="btn btn-red" id="btnConfirmShiftEnd">✅ Завершить смену</button></div></div>
+    </div>
+    <div class="modal-overlay hidden" id="modalReportIssue">
+        <div class="modal"><h3>⚠ Сообщить о неисправности</h3><div class="form-group"><label>Оборудование</label><select id="selectIssueEquipment"></select></div><div class="form-group"><label>Тип проблемы</label><select id="selectIssueType"><option>Аппаратная</option><option>ПО</option><option>Связь</option><option>Зарядка</option><option>Контроллер</option><option>Дисплей</option><option>Звук</option><option>Другое</option></select></div><div class="form-group"><label>Описание</label><textarea id="inputIssueDesc" rows="3" placeholder="Что не работает..."></textarea></div><div class="form-group"><label>Срочность</label><select id="selectIssuePriority"><option>Низкая</option><option selected>Средняя</option><option>Высокая</option></select></div><div class="btn-row"><button class="btn btn-outline" id="btnCancelIssue">Отмена</button><button class="btn btn-red" id="btnSubmitIssue">📩 Отправить в ВК</button></div></div>
+    </div>
+
+    <script>
+        const VK_TOKEN = 'vk1.a.AlJYKCT2zNGQIeo-5JKGu5d4XvvdNJ3nGJyjWUgFu-aQ1hiDuoB2Y1JC3jEU2XewGeBkge0O-xbq2heUVUtQ6VemC9sSW_kaNR4Fabtkqf8Yp-LFfvMK5hiut17ntKFd6zi5zgJNyWXpbzQ1evlvGnkx9PfIZQmijaEaZUKGZiDSrJuDne-BTqayawX8e-N9B-yxHkmtzPWDddiBLhsMeQ';
+        const VK_USER_ID = '547773543';
+        const STORAGE_KEY = 'vrhouse_data';
+        const BASE_RATE = 900;
+        const HOURLY_RATE = 100;
+
+        function loadData() { const s=localStorage.getItem(STORAGE_KEY); if(s){try{return JSON.parse(s);}catch(e){}} return null; }
+        function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ equipment:Equipment, issues:{list:Issues.list, nextId:Issues.nextId}, shift:Shift })); }
+
+        const saved = loadData();
+        let Equipment, Issues, Shift;
+        if(saved && saved.equipment) { Equipment=saved.equipment; Issues=saved.issues; Shift=saved.shift; }
+        else {
+            Equipment={helmets:[],other:[]}; Issues={list:[],nextId:1}; Shift={active:false,staffName:'',startTime:null,rate:BASE_RATE,history:[]};
+            for(let i=1;i<=13;i++) Equipment.helmets.push({id:'h'+i,name:'VR-шлем '+i,type:'vr',icon:'fa-vr-cardboard',status:'ok'});
+            Equipment.other.push({id:'sim1',name:'Автосимулятор',icon:'fa-car',status:'ok'});
+            for(let i=1;i<=2;i++) Equipment.other.push({id:'xbox'+i,name:'Xbox '+i,icon:'fa-xbox',status:'ok'});
+            for(let i=1;i<=9;i++) Equipment.other.push({id:'btn'+i,name:'Кнопка '+i,icon:'fa-circle',status:'ok'});
+            for(let i=1;i<=2;i++) Equipment.other.push({id:'watch'+i,name:'Часы '+i,icon:'fa-clock',status:'ok'});
+            for(let i=1;i<=2;i++) Equipment.other.push({id:'psu'+i,name:'Блок питания ПК '+i,icon:'fa-plug',status:'ok'});
+            for(let i=1;i<=4;i++) Equipment.other.push({id:'mon'+i,name:'Монитор ПК '+i,icon:'fa-desktop',status:'ok'});
+            saveData();
+        }
+
+        const ISSUE_STATUSES = { open:{label:'Открыта',class:'badge-open'}, wait:{label:'В ожидании',class:'badge-wait'}, progress:{label:'В работе',class:'badge-progress'}, done:{label:'Готово',class:'badge-done'}, cantfix:{label:'Не починить',class:'badge-cantfix'} };
+        function getAllEquip(){return [...Equipment.helmets, ...Equipment.other];}
+        function findEquip(id){return getAllEquip().find(e=>e.id===id);}
+        function getStats(){const a=getAllEquip();return{ok:a.filter(e=>e.status==='ok').length,issue:a.filter(e=>e.status==='issue').length,active:Issues.list.filter(i=>i.status!=='done'&&i.status!=='cantfix').length};}
+
+        // Расчёт оплаты: 900 + 100 за каждый час
+        function calcPay(startTime) {
+            const hours = Math.ceil((new Date() - new Date(startTime)) / 3600000);
+            return BASE_RATE + (hours * HOURLY_RATE);
+        }
+
+        // ВК с кнопками
+        async function sendVkMessage(issue) {
+            const d=new Date(issue.date);
+            const ds=d.toLocaleDateString('ru-RU')+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+            const pr=issue.priority==='Высокая'?'🔴':issue.priority==='Средняя'?'🟡':'🟢';
+            const msg=`⚠ НОВАЯ ПРОБЛЕМА #${issue.id}\n\nОборудование: ${issue.equipName}\nТип: ${issue.type}\nОписание: ${issue.desc}\nСрочность: ${pr} ${issue.priority}\nСтатус: Открыта\nДата: ${ds}\nСообщил: ${issue.who}\n\n🟡 В ожидании | 🔵 В работе | 🟢 Готово | ⛔ Не починить\nНажмите кнопку на сайте для реакции`;
+
+            try {
+                const r=await fetch('https://api.vk.com/method/messages.send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({user_id:VK_USER_ID,message:msg,random_id:Math.floor(Math.random()*99999999),access_token:VK_TOKEN,v:'5.199'})});
+                const data=await r.json();
+                if(data.response) { showToast('✅ Отправлено в ВК','success'); }
+                else if(data.error && data.error.error_code===901) { showToast('⚠ Напишите сообщение в сообщество ВК!','error'); }
+                else { showToast('⚠ Ошибка ВК: '+(data.error?.error_msg||'неизвестно'),'error'); }
+            } catch(e) { showToast('⚠ Нет связи с ВК','error'); }
+        }
+
+        function startShift(name){if(!name.trim())return alert('Введите имя');Shift.active=true;Shift.staffName=name.trim();Shift.startTime=new Date().toISOString();Shift.rate=BASE_RATE;closeModal('modalShiftStart');saveData();render();}
+        function endShift(){const pay=calcPay(Shift.startTime);Shift.history.push({staffName:Shift.staffName,start:Shift.startTime,end:new Date().toISOString(),rate:pay});Shift.active=false;Shift.startTime=null;closeModal('modalShiftEnd');saveData();render();showToast('🔴 Смена завершена. К выплате: '+pay+' ₽','success');}
+        function reportIssue(eid,type,desc,priority){if(!desc.trim())return alert('Опишите проблему');const item=findEquip(eid);if(item)item.status='issue';const issue={id:Issues.nextId++,equipId:eid,equipName:item?item.name:eid,type,desc,priority,status:'open',date:new Date().toISOString(),who:Shift.staffName||'Сотрудник'};Issues.list.push(issue);closeModal('modalReportIssue');saveData();render();sendVkMessage(issue);}
+        function changeIssueStatus(id,ns){const issue=Issues.list.find(i=>i.id===id);if(!issue)return;issue.status=ns;const item=findEquip(issue.equipId);if(ns==='done'&&item)item.status='ok';if(ns==='cantfix'&&item)item.status='issue';if(ns==='open'&&item)item.status='issue';saveData();render();}
+
+        // Календарь
+        let calYear, calMonth;
+        function renderCalendar() {
+            const now = new Date();
+            if (!calYear) calYear = now.getFullYear();
+            if (!calMonth) calMonth = now.getMonth();
+            const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+            const firstDay = new Date(calYear, calMonth, 1);
+            const lastDay = new Date(calYear, calMonth+1, 0);
+            let startDow = firstDay.getDay(); if(startDow===0)startDow=7; startDow--;
+            const todayStr = now.toISOString().split('T')[0];
+
+            let h = `<div class="calendar-nav">
+                <button class="btn btn-outline btn-sm" onclick="calMonth--;if(calMonth<0){calMonth=11;calYear--;}render();"><i class="fas fa-chevron-left"></i></button>
+                <span class="month-label">${months[calMonth]} ${calYear}</span>
+                <button class="btn btn-outline btn-sm" onclick="calMonth++;if(calMonth>11){calMonth=0;calYear++;}render();"><i class="fas fa-chevron-right"></i></button>
+                <button class="btn btn-outline btn-sm" onclick="calYear=new Date().getFullYear();calMonth=new Date().getMonth();render();">Сегодня</button>
+            </div><div class="calendar-grid">`;
+
+            days.forEach(d => h += `<div class="calendar-day-header">${d}</div>`);
+            const prevLast = new Date(calYear, calMonth, 0).getDate();
+            for (let i=startDow-1; i>=0; i--) {
+                const d = prevLast - i;
+                const ds = `${calMonth===0?calYear-1:calYear}-${String(calMonth===0?12:calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const shifts = Shift.history.filter(s=>s.start&&s.start.startsWith(ds));
+                h += `<div class="calendar-day other-month"><div class="day-num">${d}</div>${shifts.map(()=>'<span class="shift-dot"></span>').join('')}</div>`;
+            }
+            for (let d=1; d<=lastDay.getDate(); d++) {
+                const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const shifts = Shift.history.filter(s=>s.start&&s.start.startsWith(ds));
+                const isToday = ds === todayStr;
+                h += `<div class="calendar-day${isToday?' today':''}" onclick="showShiftsForDate('${ds}')"><div class="day-num">${d}</div>${shifts.map(()=>'<span class="shift-dot"></span>').join('')}</div>`;
+            }
+            const totalCells = startDow + lastDay.getDate();
+            const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let d=1; d<=remaining; d++) {
+                const ds = `${calMonth===11?calYear+1:calYear}-${String(calMonth===11?1:calMonth+2).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                h += `<div class="calendar-day other-month"><div class="day-num">${d}</div></div>`;
+            }
+            h += '</div>';
+            return h;
+        }
+
+        function showShiftsForDate(ds) {
+            const shifts = Shift.history.filter(s=>s.start&&s.start.startsWith(ds));
+            if(shifts.length===0) return showToast('Нет смен на этот день','');
+            const list = shifts.map(s=>{
+                const start = new Date(s.start);
+                const end = new Date(s.end);
+                const hours = Math.ceil((end-start)/3600000);
+                return `${s.staffName}: ${start.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} — ${end.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} (${hours} ч, ${s.rate} ₽)`;
+            }).join('\n');
+            alert('Смены на '+new Date(ds).toLocaleDateString('ru-RU')+':\n\n'+list);
+        }
+
+        function render() {
+            const tab=currentTab;
+            let h='';
+            switch(tab){case 'dashboard':h=renderDashboard();break;case 'shift':h=renderShiftTab();break;case 'calendar':h=renderCalendarTab();break;case 'helmets':h=renderHelmetsTab();break;case 'other':h=renderOtherTab();break;case 'issues':h=renderIssuesTab();break;case 'history':h=renderHistoryTab();break;}
+            document.getElementById('mainContent').innerHTML=h;updateBadges();updateClock();
+        }
+
+        function renderCard(item){return `<div class="eq-card ${item.status==='issue'?'issue':'ok'}" onclick="openIssueFor('${item.id}')"><i class="fas ${item.icon}"></i><div class="eq-name">${item.name}</div><div class="eq-status">${item.status==='issue'?'ПРОБЛЕМА':'ИСПРАВНО'}</div></div>`;}
+
+        function renderDashboard(){const s=getStats();return`<div class="topbar"><h1>📊 Дашборд</h1><div class="topbar-right"><span class="live-clock" id="liveClock"></span>${Shift.active?`<button class="btn btn-red" onclick="openShiftEnd()"><i class="fas fa-door-open"></i> Завершить (${calcPay(Shift.startTime)} ₽)</button>`:'<button class="btn btn-purple" onclick="openShiftStart()"><i class="fas fa-user-check"></i> Начать смену</button>'}</div></div><div class="summary"><div class="summary-card sc-green"><div class="sc-icon"><i class="fas fa-check-circle"></i></div><div class="sc-val">${s.ok}</div><div class="sc-label">Исправно</div></div><div class="summary-card sc-yellow"><div class="sc-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="sc-val">${s.issue}</div><div class="sc-label">Проблем</div></div><div class="summary-card"><div class="sc-icon" style="color:var(--red)"><i class="fas fa-bug"></i></div><div class="sc-val">${s.active}</div><div class="sc-label">Активных</div></div><div class="summary-card sc-blue"><div class="sc-icon"><i class="fas fa-ruble-sign"></i></div><div class="sc-val">${BASE_RATE}+${HOURLY_RATE}/ч</div><div class="sc-label">Ставка</div></div></div>${Shift.active?`<div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p style="color:var(--muted);">${Shift.staffName} • ${new Date(Shift.startTime).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} • К выплате: ${calcPay(Shift.startTime)} ₽</p></div>`:''}<div class="section-title"><i class="fas fa-vr-cardboard" style="color:var(--purple)"></i> VR-шлемы (13)</div><div class="eq-grid">${Equipment.helmets.map(renderCard).join('')}</div><div class="section-title"><i class="fas fa-gamepad" style="color:var(--blue)"></i> Остальное (20)</div><div class="eq-grid">${Equipment.other.map(renderCard).join('')}</div>`;}
+
+        function renderShiftTab(){if(!Shift.active)return`<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block inactive"><div class="shift-status-icon" style="font-size:64px;">⏰</div><div class="shift-status-text">Смена не начата</div><p style="color:var(--green);">Ставка: ${BASE_RATE} ₽ + ${HOURLY_RATE} ₽/час</p><button class="btn btn-purple" onclick="openShiftStart()">Начать смену</button></div>`;const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000);const pay=calcPay(Shift.startTime);return`<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Прошло: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p><button class="btn btn-red" onclick="openShiftEnd()">Завершить</button></div>`;}
+
+        function renderCalendarTab(){return`<div class="topbar"><h1>📅 Календарь смен</h1></div>${renderCalendar()}<div class="section-title"><i class="fas fa-list"></i> Все смены</div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>${[...Shift.history].reverse().slice(0,20).map(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const h=Math.ceil((e-s)/3600000);return`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${h} ч</td><td>${sh.rate} ₽</td></tr>`;}).join('')||'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Нет смен</td></tr>'}</tbody></table></div>`;}
+        function renderHelmetsTab(){return'<div class="topbar"><h1>🔮 VR-шлемы</h1></div><div class="eq-grid">'+Equipment.helmets.map(renderCard).join('')+'</div>';}
+        function renderOtherTab(){return'<div class="topbar"><h1>🕹 Остальное</h1></div><div class="eq-grid">'+Equipment.other.map(renderCard).join('')+'</div>';}
+
+        function renderIssuesTab(){const list=[...Issues.list].reverse();let h='<div class="topbar"><h1>📋 Журнал проблем</h1><button class="btn btn-red" onclick="openIssueFor(null)"><i class="fas fa-plus"></i> Новая проблема</button></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Оборудование</th><th>Тип</th><th>Срочность</th><th>Статус</th><th>Дата</th><th></th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="7" style="color:var(--green);text-align:center;padding:20px;">✅ Проблем нет</td></tr>';else list.forEach(iss=>{const d=new Date(iss.date),st=ISSUE_STATUSES[iss.status]||ISSUE_STATUSES['open'];let btns='';if(iss.status==='open')btns=`<button class="btn btn-yellow btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'wait')">🟡</button><button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='wait')btns=`<button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='progress')btns=`<button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else btns=`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'open')">🔄</button>`;h+=`<tr><td>#${iss.id}</td><td><strong>${iss.equipName}</strong></td><td>${iss.type}</td><td>${iss.priority}</td><td><span class="badge ${st.class}">${st.label}</span></td><td>${d.toLocaleDateString('ru-RU')}</td><td><div style="display:flex;gap:4px;">${btns}</div></td></tr>`;});return h+'</tbody></table></div>';}
+
+        function renderHistoryTab(){const list=[...Shift.history].reverse();let h='<div class="topbar"><h1>📜 История смен</h1></div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Пусто</td></tr>';else list.forEach(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const hrs=Math.ceil((e-s)/3600000);h+=`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${hrs} ч</td><td>${sh.rate} ₽</td></tr>`;});return h+'</tbody></table></div>';}
+
+        function showToast(msg,type){const old=document.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast '+type;t.innerHTML=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
+        function openModal(id){document.getElementById(id).classList.remove('hidden');}
+        function closeModal(id){document.getElementById(id).classList.add('hidden');}
+        function openShiftStart(){document.getElementById('inputStaffName').value=Shift.staffName||'';openModal('modalShiftStart');}
+        function openShiftEnd(){const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000);const pay=calcPay(Shift.startTime);document.getElementById('shiftEndInfo').innerHTML=`<p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Отработано: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p>`;openModal('modalShiftEnd');}
+        function openIssueFor(equipId){const sel=document.getElementById('selectIssueEquipment');sel.innerHTML='';getAllEquip().forEach(item=>{const o=document.createElement('option');o.value=item.id;o.textContent=item.name+(item.status==='issue'?' ⚠':'');if(item.id===equipId)o.selected=true;sel.appendChild(o);});document.getElementById('inputIssueDesc').value='';openModal('modalReportIssue');}
+        function submitIssue(){reportIssue(document.getElementById('selectIssueEquipment').value,document.getElementById('selectIssueType').value,document.getElementById('inputIssueDesc').value,document.getElementById('selectIssuePriority').value);}
+
+        let currentTab='dashboard';
+        function switchTab(tab){currentTab=tab;document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));const item=document.querySelector(`[data-tab="${tab}"]`);if(item)item.classList.add('active');render();}
+        function updateBadges(){const active=Issues.list.filter(i=>i.status!=='done'&&i.status!=='cantfix').length;const badge=document.getElementById('badgeIssues');if(badge){badge.textContent=active;badge.style.display=active>0?'inline':'none';}}
+        function updateClock(){const el=document.getElementById('liveClock');if(el)el.textContent=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});if(Shift.active){const pay=calcPay(Shift.startTime);const livePayEl=document.getElementById('livePay');if(livePayEl)livePayEl.textContent=pay+' ₽';}}
+
+        function buildSidebar(){document.getElementById('sidebar').innerHTML=`<div class="logo"><i class="fas fa-vr-cardboard"></i><span>VR HOUSE</span></div><div class="nav-label">Сотрудник</div><div class="nav-item active" data-tab="dashboard"><i class="fas fa-th-large"></i><span>Дашборд</span></div><div class="nav-item" data-tab="shift"><i class="fas fa-user-clock"></i><span>Моя смена</span></div><div class="nav-item" data-tab="calendar"><i class="fas fa-calendar-alt"></i><span>Календарь смен</span></div><div class="nav-label">Оборудование</div><div class="nav-item" data-tab="helmets"><i class="fas fa-head-side-virus"></i><span>VR-шлемы</span><span class="nav-badge">13</span></div><div class="nav-item" data-tab="other"><i class="fas fa-gamepad"></i><span>Остальное</span><span class="nav-badge">20</span></div><div class="nav-label">Проблемы</div><div class="nav-item" data-tab="issues"><i class="fas fa-exclamation-triangle"></i><span>Журнал проблем</span><span class="nav-badge warn" id="badgeIssues">0</span></div><div class="nav-label">Система</div><div class="nav-item" data-tab="history"><i class="fas fa-history"></i><span>История смен</span></div>`;document.querySelectorAll('.nav-item').forEach(item=>{item.addEventListener('click',function(){const tab=this.dataset.tab;if(tab)switchTab(tab);});});}
+
+        // Автообновление оплаты при активной смене
+        setInterval(()=>{if(Shift.active&&currentTab==='dashboard')render();},60000);
+
+        function init(){buildSidebar();document.getElementById('btnStartShift').onclick=()=>startShift(document.getElementById('inputStaffName').value);document.getElementById('btnCancelShift').onclick=()=>closeModal('modalShiftStart');document.getElementById('btnConfirmShiftEnd').onclick=endShift;document.getElementById('btnCancelShiftEnd').onclick=()=>closeModal('modalShiftEnd');document.getElementById('btnSubmitIssue').onclick=submitIssue;document.getElementById('btnCancelIssue').onclick=()=>closeModal('modalReportIssue');document.querySelectorAll('.modal-overlay').forEach(ov=>ov.onclick=function(e){if(e.target===this)this.classList.add('hidden');});document.onkeydown=function(e){if(e.key==='Escape')document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));};switchTab('dashboard');setInterval(updateClock,1000);}
+        document.addEventListener('DOMContentLoaded',init);
+    </script>
+</body>
+</html>
