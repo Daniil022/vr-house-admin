@@ -77,7 +77,6 @@
         .badge-done { background: rgba(63,185,80,0.15); color: var(--green); }
         .badge-cantfix { background: rgba(240,136,62,0.15); color: var(--orange); }
 
-        /* Календарь */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 16px; }
         .calendar-day-header { text-align: center; font-size: 11px; color: var(--muted); font-weight: 700; padding: 8px 0; }
         .calendar-day { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px; min-height: 80px; cursor: pointer; transition: 0.2s; }
@@ -108,7 +107,7 @@
     <main class="main" id="mainContent"></main>
 
     <div class="modal-overlay hidden" id="modalShiftStart">
-        <div class="modal"><h3>🟢 Приход на смену</h3><div class="form-group"><label>Имя сотрудника</label><input type="text" id="inputStaffName" placeholder="Ваше имя"></div><p style="color:var(--muted);font-size:13px;margin-bottom:12px;">💰 900 ₽ + 100 ₽ за каждый час</p><div class="btn-row"><button class="btn btn-outline" id="btnCancelShift">Отмена</button><button class="btn btn-purple" id="btnStartShift">▶ Начать смену</button></div></div>
+        <div class="modal"><h3>🟢 Приход на смену</h3><div class="form-group"><label>Имя сотрудника</label><input type="text" id="inputStaffName" placeholder="Ваше имя"></div><p style="color:var(--muted);font-size:13px;margin-bottom:12px;">💰 0 ₽ сейчас + 100 ₽ каждый час</p><div class="btn-row"><button class="btn btn-outline" id="btnCancelShift">Отмена</button><button class="btn btn-purple" id="btnStartShift">▶ Начать смену</button></div></div>
     </div>
     <div class="modal-overlay hidden" id="modalShiftEnd">
         <div class="modal"><h3>🔴 Завершение смены</h3><div id="shiftEndInfo"></div><div class="btn-row"><button class="btn btn-outline" id="btnCancelShiftEnd">Отмена</button><button class="btn btn-red" id="btnConfirmShiftEnd">✅ Завершить смену</button></div></div>
@@ -121,8 +120,7 @@
         const VK_TOKEN = 'vk1.a.AlJYKCT2zNGQIeo-5JKGu5d4XvvdNJ3nGJyjWUgFu-aQ1hiDuoB2Y1JC3jEU2XewGeBkge0O-xbq2heUVUtQ6VemC9sSW_kaNR4Fabtkqf8Yp-LFfvMK5hiut17ntKFd6zi5zgJNyWXpbzQ1evlvGnkx9PfIZQmijaEaZUKGZiDSrJuDne-BTqayawX8e-N9B-yxHkmtzPWDddiBLhsMeQ';
         const VK_USER_ID = '547773543';
         const STORAGE_KEY = 'vrhouse_data';
-        const BASE_RATE = 900;
-        const HOURLY_RATE = 100;
+        const HOURLY_RATE = 100; // 100 ₽ в час
 
         function loadData() { const s=localStorage.getItem(STORAGE_KEY); if(s){try{return JSON.parse(s);}catch(e){}} return null; }
         function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ equipment:Equipment, issues:{list:Issues.list, nextId:Issues.nextId}, shift:Shift })); }
@@ -131,7 +129,7 @@
         let Equipment, Issues, Shift;
         if(saved && saved.equipment) { Equipment=saved.equipment; Issues=saved.issues; Shift=saved.shift; }
         else {
-            Equipment={helmets:[],other:[]}; Issues={list:[],nextId:1}; Shift={active:false,staffName:'',startTime:null,rate:BASE_RATE,history:[]};
+            Equipment={helmets:[],other:[]}; Issues={list:[],nextId:1}; Shift={active:false,staffName:'',startTime:null,history:[]};
             for(let i=1;i<=13;i++) Equipment.helmets.push({id:'h'+i,name:'VR-шлем '+i,type:'vr',icon:'fa-vr-cardboard',status:'ok'});
             Equipment.other.push({id:'sim1',name:'Автосимулятор',icon:'fa-car',status:'ok'});
             for(let i=1;i<=2;i++) Equipment.other.push({id:'xbox'+i,name:'Xbox '+i,icon:'fa-xbox',status:'ok'});
@@ -147,34 +145,32 @@
         function findEquip(id){return getAllEquip().find(e=>e.id===id);}
         function getStats(){const a=getAllEquip();return{ok:a.filter(e=>e.status==='ok').length,issue:a.filter(e=>e.status==='issue').length,active:Issues.list.filter(i=>i.status!=='done'&&i.status!=='cantfix').length};}
 
-        // Расчёт оплаты: 900 + 100 за каждый час
+        // Расчёт: 0₽ + 100₽ × часы
         function calcPay(startTime) {
-            const hours = Math.ceil((new Date() - new Date(startTime)) / 3600000);
-            return BASE_RATE + (hours * HOURLY_RATE);
+            if (!startTime) return 0;
+            const hours = Math.floor((new Date() - new Date(startTime)) / 3600000);
+            return hours * HOURLY_RATE;
         }
 
-        // ВК с кнопками
         async function sendVkMessage(issue) {
             const d=new Date(issue.date);
             const ds=d.toLocaleDateString('ru-RU')+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
             const pr=issue.priority==='Высокая'?'🔴':issue.priority==='Средняя'?'🟡':'🟢';
-            const msg=`⚠ НОВАЯ ПРОБЛЕМА #${issue.id}\n\nОборудование: ${issue.equipName}\nТип: ${issue.type}\nОписание: ${issue.desc}\nСрочность: ${pr} ${issue.priority}\nСтатус: Открыта\nДата: ${ds}\nСообщил: ${issue.who}\n\n🟡 В ожидании | 🔵 В работе | 🟢 Готово | ⛔ Не починить\nНажмите кнопку на сайте для реакции`;
-
+            const msg=`⚠ НОВАЯ ПРОБЛЕМА #${issue.id}\n\nОборудование: ${issue.equipName}\nТип: ${issue.type}\nОписание: ${issue.desc}\nСрочность: ${pr} ${issue.priority}\nСтатус: Открыта\nДата: ${ds}\nСообщил: ${issue.who}\n\nРеагируйте на сайте: 🟡 Ожидание | 🔵 В работе | 🟢 Готово | ⛔ Не починить`;
             try {
                 const r=await fetch('https://api.vk.com/method/messages.send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({user_id:VK_USER_ID,message:msg,random_id:Math.floor(Math.random()*99999999),access_token:VK_TOKEN,v:'5.199'})});
                 const data=await r.json();
                 if(data.response) { showToast('✅ Отправлено в ВК','success'); }
                 else if(data.error && data.error.error_code===901) { showToast('⚠ Напишите сообщение в сообщество ВК!','error'); }
-                else { showToast('⚠ Ошибка ВК: '+(data.error?.error_msg||'неизвестно'),'error'); }
+                else { showToast('⚠ Ошибка ВК','error'); }
             } catch(e) { showToast('⚠ Нет связи с ВК','error'); }
         }
 
-        function startShift(name){if(!name.trim())return alert('Введите имя');Shift.active=true;Shift.staffName=name.trim();Shift.startTime=new Date().toISOString();Shift.rate=BASE_RATE;closeModal('modalShiftStart');saveData();render();}
+        function startShift(name){if(!name.trim())return alert('Введите имя');Shift.active=true;Shift.staffName=name.trim();Shift.startTime=new Date().toISOString();closeModal('modalShiftStart');saveData();render();}
         function endShift(){const pay=calcPay(Shift.startTime);Shift.history.push({staffName:Shift.staffName,start:Shift.startTime,end:new Date().toISOString(),rate:pay});Shift.active=false;Shift.startTime=null;closeModal('modalShiftEnd');saveData();render();showToast('🔴 Смена завершена. К выплате: '+pay+' ₽','success');}
         function reportIssue(eid,type,desc,priority){if(!desc.trim())return alert('Опишите проблему');const item=findEquip(eid);if(item)item.status='issue';const issue={id:Issues.nextId++,equipId:eid,equipName:item?item.name:eid,type,desc,priority,status:'open',date:new Date().toISOString(),who:Shift.staffName||'Сотрудник'};Issues.list.push(issue);closeModal('modalReportIssue');saveData();render();sendVkMessage(issue);}
         function changeIssueStatus(id,ns){const issue=Issues.list.find(i=>i.id===id);if(!issue)return;issue.status=ns;const item=findEquip(issue.equipId);if(ns==='done'&&item)item.status='ok';if(ns==='cantfix'&&item)item.status='issue';if(ns==='open'&&item)item.status='issue';saveData();render();}
 
-        // Календарь
         let calYear, calMonth;
         function renderCalendar() {
             const now = new Date();
@@ -193,7 +189,6 @@
                 <button class="btn btn-outline btn-sm" onclick="calMonth++;if(calMonth>11){calMonth=0;calYear++;}render();"><i class="fas fa-chevron-right"></i></button>
                 <button class="btn btn-outline btn-sm" onclick="calYear=new Date().getFullYear();calMonth=new Date().getMonth();render();">Сегодня</button>
             </div><div class="calendar-grid">`;
-
             days.forEach(d => h += `<div class="calendar-day-header">${d}</div>`);
             const prevLast = new Date(calYear, calMonth, 0).getDate();
             for (let i=startDow-1; i>=0; i--) {
@@ -211,21 +206,18 @@
             const totalCells = startDow + lastDay.getDate();
             const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
             for (let d=1; d<=remaining; d++) {
-                const ds = `${calMonth===11?calYear+1:calYear}-${String(calMonth===11?1:calMonth+2).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
                 h += `<div class="calendar-day other-month"><div class="day-num">${d}</div></div>`;
             }
-            h += '</div>';
-            return h;
+            return h + '</div>';
         }
 
         function showShiftsForDate(ds) {
             const shifts = Shift.history.filter(s=>s.start&&s.start.startsWith(ds));
             if(shifts.length===0) return showToast('Нет смен на этот день','');
             const list = shifts.map(s=>{
-                const start = new Date(s.start);
-                const end = new Date(s.end);
-                const hours = Math.ceil((end-start)/3600000);
-                return `${s.staffName}: ${start.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} — ${end.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} (${hours} ч, ${s.rate} ₽)`;
+                const start = new Date(s.start), end = new Date(s.end);
+                const hours = Math.floor((end-start)/3600000);
+                return `${s.staffName}: ${start.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} → ${end.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} (${hours} ч, ${s.rate} ₽)`;
             }).join('\n');
             alert('Смены на '+new Date(ds).toLocaleDateString('ru-RU')+':\n\n'+list);
         }
@@ -239,17 +231,35 @@
 
         function renderCard(item){return `<div class="eq-card ${item.status==='issue'?'issue':'ok'}" onclick="openIssueFor('${item.id}')"><i class="fas ${item.icon}"></i><div class="eq-name">${item.name}</div><div class="eq-status">${item.status==='issue'?'ПРОБЛЕМА':'ИСПРАВНО'}</div></div>`;}
 
-        function renderDashboard(){const s=getStats();return`<div class="topbar"><h1>📊 Дашборд</h1><div class="topbar-right"><span class="live-clock" id="liveClock"></span>${Shift.active?`<button class="btn btn-red" onclick="openShiftEnd()"><i class="fas fa-door-open"></i> Завершить (${calcPay(Shift.startTime)} ₽)</button>`:'<button class="btn btn-purple" onclick="openShiftStart()"><i class="fas fa-user-check"></i> Начать смену</button>'}</div></div><div class="summary"><div class="summary-card sc-green"><div class="sc-icon"><i class="fas fa-check-circle"></i></div><div class="sc-val">${s.ok}</div><div class="sc-label">Исправно</div></div><div class="summary-card sc-yellow"><div class="sc-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="sc-val">${s.issue}</div><div class="sc-label">Проблем</div></div><div class="summary-card"><div class="sc-icon" style="color:var(--red)"><i class="fas fa-bug"></i></div><div class="sc-val">${s.active}</div><div class="sc-label">Активных</div></div><div class="summary-card sc-blue"><div class="sc-icon"><i class="fas fa-ruble-sign"></i></div><div class="sc-val">${BASE_RATE}+${HOURLY_RATE}/ч</div><div class="sc-label">Ставка</div></div></div>${Shift.active?`<div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p style="color:var(--muted);">${Shift.staffName} • ${new Date(Shift.startTime).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} • К выплате: ${calcPay(Shift.startTime)} ₽</p></div>`:''}<div class="section-title"><i class="fas fa-vr-cardboard" style="color:var(--purple)"></i> VR-шлемы (13)</div><div class="eq-grid">${Equipment.helmets.map(renderCard).join('')}</div><div class="section-title"><i class="fas fa-gamepad" style="color:var(--blue)"></i> Остальное (20)</div><div class="eq-grid">${Equipment.other.map(renderCard).join('')}</div>`;}
+        function renderDashboard(){
+            const s=getStats();
+            const pay = Shift.active ? calcPay(Shift.startTime) : 0;
+            return `<div class="topbar"><h1>📊 Дашборд</h1><div class="topbar-right"><span class="live-clock" id="liveClock"></span>${Shift.active?`<button class="btn btn-red" onclick="openShiftEnd()"><i class="fas fa-door-open"></i> Завершить (${pay} ₽)</button>`:'<button class="btn btn-purple" onclick="openShiftStart()"><i class="fas fa-user-check"></i> Начать смену</button>'}</div></div>
+            <div class="summary">
+                <div class="summary-card sc-green"><div class="sc-icon"><i class="fas fa-check-circle"></i></div><div class="sc-val">${s.ok}</div><div class="sc-label">Исправно</div></div>
+                <div class="summary-card sc-yellow"><div class="sc-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="sc-val">${s.issue}</div><div class="sc-label">Проблем</div></div>
+                <div class="summary-card"><div class="sc-icon" style="color:var(--red)"><i class="fas fa-bug"></i></div><div class="sc-val">${s.active}</div><div class="sc-label">Активных</div></div>
+                <div class="summary-card sc-blue"><div class="sc-icon"><i class="fas fa-ruble-sign"></i></div><div class="sc-val">${HOURLY_RATE} ₽/ч</div><div class="sc-label">Ставка</div></div>
+            </div>
+            ${Shift.active?`<div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p style="color:var(--muted);">${Shift.staffName} • ${new Date(Shift.startTime).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} • К выплате: ${pay} ₽</p></div>`:''}
+            <div class="section-title"><i class="fas fa-vr-cardboard" style="color:var(--purple)"></i> VR-шлемы (13)</div><div class="eq-grid">${Equipment.helmets.map(renderCard).join('')}</div>
+            <div class="section-title"><i class="fas fa-gamepad" style="color:var(--blue)"></i> Остальное (20)</div><div class="eq-grid">${Equipment.other.map(renderCard).join('')}</div>`;
+        }
 
-        function renderShiftTab(){if(!Shift.active)return`<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block inactive"><div class="shift-status-icon" style="font-size:64px;">⏰</div><div class="shift-status-text">Смена не начата</div><p style="color:var(--green);">Ставка: ${BASE_RATE} ₽ + ${HOURLY_RATE} ₽/час</p><button class="btn btn-purple" onclick="openShiftStart()">Начать смену</button></div>`;const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000);const pay=calcPay(Shift.startTime);return`<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Прошло: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p><button class="btn btn-red" onclick="openShiftEnd()">Завершить</button></div>`;}
+        function renderShiftTab(){
+            if(!Shift.active) return `<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block inactive"><div class="shift-status-icon" style="font-size:64px;">⏰</div><div class="shift-status-text">Смена не начата</div><p style="color:var(--green);">Оплата: ${HOURLY_RATE} ₽/час</p><button class="btn btn-purple" onclick="openShiftStart()">Начать смену</button></div>`;
+            const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000);
+            const pay=calcPay(Shift.startTime);
+            return `<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Прошло: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p><button class="btn btn-red" onclick="openShiftEnd()">Завершить</button></div>`;
+        }
 
-        function renderCalendarTab(){return`<div class="topbar"><h1>📅 Календарь смен</h1></div>${renderCalendar()}<div class="section-title"><i class="fas fa-list"></i> Все смены</div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>${[...Shift.history].reverse().slice(0,20).map(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const h=Math.ceil((e-s)/3600000);return`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${h} ч</td><td>${sh.rate} ₽</td></tr>`;}).join('')||'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Нет смен</td></tr>'}</tbody></table></div>`;}
+        function renderCalendarTab(){return`<div class="topbar"><h1>📅 Календарь смен</h1></div>${renderCalendar()}<div class="section-title"><i class="fas fa-list"></i> Последние смены</div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>${[...Shift.history].reverse().slice(0,20).map(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const h=Math.floor((e-s)/3600000);return`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${h} ч</td><td>${sh.rate} ₽</td></tr>`;}).join('')||'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Нет смен</td></tr>'}</tbody></table></div>`;}
         function renderHelmetsTab(){return'<div class="topbar"><h1>🔮 VR-шлемы</h1></div><div class="eq-grid">'+Equipment.helmets.map(renderCard).join('')+'</div>';}
         function renderOtherTab(){return'<div class="topbar"><h1>🕹 Остальное</h1></div><div class="eq-grid">'+Equipment.other.map(renderCard).join('')+'</div>';}
 
         function renderIssuesTab(){const list=[...Issues.list].reverse();let h='<div class="topbar"><h1>📋 Журнал проблем</h1><button class="btn btn-red" onclick="openIssueFor(null)"><i class="fas fa-plus"></i> Новая проблема</button></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Оборудование</th><th>Тип</th><th>Срочность</th><th>Статус</th><th>Дата</th><th></th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="7" style="color:var(--green);text-align:center;padding:20px;">✅ Проблем нет</td></tr>';else list.forEach(iss=>{const d=new Date(iss.date),st=ISSUE_STATUSES[iss.status]||ISSUE_STATUSES['open'];let btns='';if(iss.status==='open')btns=`<button class="btn btn-yellow btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'wait')">🟡</button><button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='wait')btns=`<button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='progress')btns=`<button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else btns=`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'open')">🔄</button>`;h+=`<tr><td>#${iss.id}</td><td><strong>${iss.equipName}</strong></td><td>${iss.type}</td><td>${iss.priority}</td><td><span class="badge ${st.class}">${st.label}</span></td><td>${d.toLocaleDateString('ru-RU')}</td><td><div style="display:flex;gap:4px;">${btns}</div></td></tr>`;});return h+'</tbody></table></div>';}
 
-        function renderHistoryTab(){const list=[...Shift.history].reverse();let h='<div class="topbar"><h1>📜 История смен</h1></div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:20px;">Пусто</td></tr>';else list.forEach(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const hrs=Math.ceil((e-s)/3600000);h+=`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${hrs} ч</td><td>${sh.rate} ₽</td></tr>`;});return h+'</tbody></table></div>';}
+        function renderHistoryTab(){const list=[...Shift.history].reverse();let h='<div class="topbar"><h1>📜 История смен</h1></div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Пусто</td></tr>';else list.forEach(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const hrs=Math.floor((e-s)/3600000);h+=`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${hrs} ч</td><td>${sh.rate} ₽</td></tr>`;});return h+'</tbody></table></div>';}
 
         function showToast(msg,type){const old=document.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast '+type;t.innerHTML=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
         function openModal(id){document.getElementById(id).classList.remove('hidden');}
@@ -262,12 +272,11 @@
         let currentTab='dashboard';
         function switchTab(tab){currentTab=tab;document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));const item=document.querySelector(`[data-tab="${tab}"]`);if(item)item.classList.add('active');render();}
         function updateBadges(){const active=Issues.list.filter(i=>i.status!=='done'&&i.status!=='cantfix').length;const badge=document.getElementById('badgeIssues');if(badge){badge.textContent=active;badge.style.display=active>0?'inline':'none';}}
-        function updateClock(){const el=document.getElementById('liveClock');if(el)el.textContent=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});if(Shift.active){const pay=calcPay(Shift.startTime);const livePayEl=document.getElementById('livePay');if(livePayEl)livePayEl.textContent=pay+' ₽';}}
+        function updateClock(){const el=document.getElementById('liveClock');if(el)el.textContent=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 
         function buildSidebar(){document.getElementById('sidebar').innerHTML=`<div class="logo"><i class="fas fa-vr-cardboard"></i><span>VR HOUSE</span></div><div class="nav-label">Сотрудник</div><div class="nav-item active" data-tab="dashboard"><i class="fas fa-th-large"></i><span>Дашборд</span></div><div class="nav-item" data-tab="shift"><i class="fas fa-user-clock"></i><span>Моя смена</span></div><div class="nav-item" data-tab="calendar"><i class="fas fa-calendar-alt"></i><span>Календарь смен</span></div><div class="nav-label">Оборудование</div><div class="nav-item" data-tab="helmets"><i class="fas fa-head-side-virus"></i><span>VR-шлемы</span><span class="nav-badge">13</span></div><div class="nav-item" data-tab="other"><i class="fas fa-gamepad"></i><span>Остальное</span><span class="nav-badge">20</span></div><div class="nav-label">Проблемы</div><div class="nav-item" data-tab="issues"><i class="fas fa-exclamation-triangle"></i><span>Журнал проблем</span><span class="nav-badge warn" id="badgeIssues">0</span></div><div class="nav-label">Система</div><div class="nav-item" data-tab="history"><i class="fas fa-history"></i><span>История смен</span></div>`;document.querySelectorAll('.nav-item').forEach(item=>{item.addEventListener('click',function(){const tab=this.dataset.tab;if(tab)switchTab(tab);});});}
 
-        // Автообновление оплаты при активной смене
-        setInterval(()=>{if(Shift.active&&currentTab==='dashboard')render();},60000);
+        setInterval(()=>{if(Shift.active && (currentTab==='dashboard'||currentTab==='shift')) render();}, 60000);
 
         function init(){buildSidebar();document.getElementById('btnStartShift').onclick=()=>startShift(document.getElementById('inputStaffName').value);document.getElementById('btnCancelShift').onclick=()=>closeModal('modalShiftStart');document.getElementById('btnConfirmShiftEnd').onclick=endShift;document.getElementById('btnCancelShiftEnd').onclick=()=>closeModal('modalShiftEnd');document.getElementById('btnSubmitIssue').onclick=submitIssue;document.getElementById('btnCancelIssue').onclick=()=>closeModal('modalReportIssue');document.querySelectorAll('.modal-overlay').forEach(ov=>ov.onclick=function(e){if(e.target===this)this.classList.add('hidden');});document.onkeydown=function(e){if(e.key==='Escape')document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));};switchTab('dashboard');setInterval(updateClock,1000);}
         document.addEventListener('DOMContentLoaded',init);
