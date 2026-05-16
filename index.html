@@ -10,6 +10,7 @@
             --bg: #0d1117; --surface: #161b22; --card: #1c2128; --border: #30363d;
             --text: #e6edf3; --muted: #8b949e; --purple: #a855f7; --green: #3fb950;
             --red: #f85149; --yellow: #d2991d; --blue: #58a6ff; --orange: #f0883e;
+            --pink: #f06292; --teal: #4db6ac;
         }
         * { margin:0; padding:0; box-sizing:border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
         body { background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
@@ -47,6 +48,7 @@
         .summary-card .sc-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
         .sc-green .sc-icon { color: var(--green); } .sc-purple .sc-icon { color: var(--purple); }
         .sc-yellow .sc-icon { color: var(--yellow); } .sc-blue .sc-icon { color: var(--blue); }
+        .sc-pink .sc-icon { color: var(--pink); } .sc-teal .sc-icon { color: var(--teal); }
 
         .section-title { font-size: 17px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
         .eq-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(105px,1fr)); gap: 10px; margin-bottom: 28px; }
@@ -54,11 +56,12 @@
         .eq-card:hover { border-color: var(--purple); }
         .eq-card.ok { border-color: #1f3322; background: #111a13; }
         .eq-card.issue { border-color: var(--yellow); background: #1f1a0e; }
+        .eq-card.moved { border-color: var(--blue); background: #0f1a2e; }
         .eq-card i { font-size: 24px; color: var(--muted); }
-        .eq-card.ok i { color: var(--green); } .eq-card.issue i { color: var(--yellow); }
+        .eq-card.ok i { color: var(--green); } .eq-card.issue i { color: var(--yellow); } .eq-card.moved i { color: var(--blue); }
         .eq-card .eq-name { font-size: 11px; font-weight: 600; }
         .eq-card .eq-status { font-size: 10px; font-weight: 700; text-transform: uppercase; }
-        .eq-card.ok .eq-status { color: var(--green); } .eq-card.issue .eq-status { color: var(--yellow); }
+        .eq-card.ok .eq-status { color: var(--green); } .eq-card.issue .eq-status { color: var(--yellow); } .eq-card.moved .eq-status { color: var(--blue); }
 
         .shift-block { background: var(--card); border: 2px solid var(--green); border-radius: 16px; padding: 28px; text-align: center; margin-bottom: 24px; }
         .shift-block.inactive { border-color: var(--border); }
@@ -76,6 +79,10 @@
         .badge-progress { background: rgba(88,166,255,0.15); color: var(--blue); }
         .badge-done { background: rgba(63,185,80,0.15); color: var(--green); }
         .badge-cantfix { background: rgba(240,136,62,0.15); color: var(--orange); }
+        .badge-park { background: rgba(77,182,172,0.15); color: var(--teal); }
+        .badge-event { background: rgba(240,98,146,0.15); color: var(--pink); }
+        .badge-repair { background: rgba(240,136,62,0.15); color: var(--orange); }
+        .badge-staff { background: rgba(168,85,247,0.15); color: var(--purple); }
 
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 16px; }
         .calendar-day-header { text-align: center; font-size: 11px; color: var(--muted); font-weight: 700; padding: 8px 0; }
@@ -93,12 +100,13 @@
         @keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
 
         .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.7); z-index:200; display:flex; align-items:center; justify-content:center; }
-        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 500px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
+        .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 24px; width: 550px; max-width: 90vw; max-height: 85vh; overflow-y: auto; }
         .modal h3 { margin-bottom: 16px; font-size: 18px; }
         .modal .form-group { margin-bottom: 14px; }
         .modal label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
         .modal select,.modal input,.modal textarea { width:100%; padding:10px 12px; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px; outline:none; resize:vertical; }
         .modal .btn-row { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; flex-wrap:wrap; }
+        .modal .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -106,52 +114,101 @@
     <aside class="sidebar" id="sidebar"></aside>
     <main class="main" id="mainContent"></main>
 
+    <!-- МОДАЛКИ СМЕНЫ -->
     <div class="modal-overlay hidden" id="modalShiftStart">
         <div class="modal"><h3>🟢 Приход на смену</h3><div class="form-group"><label>Имя сотрудника</label><input type="text" id="inputStaffName" placeholder="Ваше имя"></div><p style="color:var(--muted);font-size:13px;margin-bottom:12px;">💰 0 ₽ сейчас + 100 ₽ каждый час</p><div class="btn-row"><button class="btn btn-outline" id="btnCancelShift">Отмена</button><button class="btn btn-purple" id="btnStartShift">▶ Начать смену</button></div></div>
     </div>
     <div class="modal-overlay hidden" id="modalShiftEnd">
         <div class="modal"><h3>🔴 Завершение смены</h3><div id="shiftEndInfo"></div><div class="btn-row"><button class="btn btn-outline" id="btnCancelShiftEnd">Отмена</button><button class="btn btn-red" id="btnConfirmShiftEnd">✅ Завершить смену</button></div></div>
     </div>
+
+    <!-- МОДАЛКА ПРОБЛЕМЫ -->
     <div class="modal-overlay hidden" id="modalReportIssue">
         <div class="modal"><h3>⚠ Сообщить о неисправности</h3><div class="form-group"><label>Оборудование</label><select id="selectIssueEquipment"></select></div><div class="form-group"><label>Тип проблемы</label><select id="selectIssueType"><option>Аппаратная</option><option>ПО</option><option>Связь</option><option>Зарядка</option><option>Контроллер</option><option>Дисплей</option><option>Звук</option><option>Другое</option></select></div><div class="form-group"><label>Описание</label><textarea id="inputIssueDesc" rows="3" placeholder="Что не работает..."></textarea></div><div class="form-group"><label>Срочность</label><select id="selectIssuePriority"><option>Низкая</option><option selected>Средняя</option><option>Высокая</option></select></div><div class="btn-row"><button class="btn btn-outline" id="btnCancelIssue">Отмена</button><button class="btn btn-red" id="btnSubmitIssue">📩 Отправить в ВК</button></div></div>
     </div>
 
+    <!-- МОДАЛКА ПЕРЕМЕЩЕНИЯ -->
+    <div class="modal-overlay hidden" id="modalMoveEquipment">
+        <div class="modal"><h3>📦 Перемещение оборудования</h3>
+            <div class="form-group"><label>Оборудование</label><select id="selectMoveEquipment"></select></div>
+            <div class="form-group"><label>Категория</label><select id="selectMoveCategory"><option value="park">🏞 Парк</option><option value="event">🎪 Выездное мероприятие</option><option value="repair">🔧 Ремонт</option><option value="staff">👤 Взял сотрудник</option></select></div>
+            <div class="form-group"><label>Описание (куда именно, зачем)</label><textarea id="inputMoveDesc" rows="2" placeholder="Подробности перемещения..."></textarea></div>
+            <div class="form-row">
+                <div class="form-group"><label>Дата начала</label><input type="date" id="inputMoveDateFrom"></div>
+                <div class="form-group"><label>Дата окончания</label><input type="date" id="inputMoveDateTo"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Время (примерно)</label><input type="time" id="inputMoveTime" value="12:00"></div>
+                <div class="form-group"><label>Время возврата</label><input type="time" id="inputMoveTimeBack" value="18:00"></div>
+            </div>
+            <div class="form-row">
+                <div class="form-group"><label>Имя сотрудника</label><input type="text" id="inputMoveStaffName" placeholder="Кто взял"></div>
+                <div class="form-group"><label>Телефон</label><input type="tel" id="inputMovePhone" placeholder="+7..."></div>
+            </div>
+            <div class="btn-row"><button class="btn btn-outline" id="btnCancelMove">Отмена</button><button class="btn btn-blue" id="btnSubmitMove">📦 Зафиксировать</button></div>
+        </div>
+    </div>
+
+    <!-- МОДАЛКА ДЕТАЛЕЙ ПЕРЕМЕЩЕНИЯ -->
+    <div class="modal-overlay hidden" id="modalMoveDetail">
+        <div class="modal"><h3 id="modalMoveDetailTitle">📦 Детали перемещения</h3><div id="modalMoveDetailBody"></div><div class="btn-row"><button class="btn btn-green btn-sm" id="btnReturnEquipment" style="display:none;">🔄 Вернуть на место</button><button class="btn btn-outline" id="btnCloseMoveDetail">Закрыть</button></div></div>
+    </div>
+
     <script>
+        // ═══════════════════════════════════
+        // КОНФИГ
+        // ═══════════════════════════════════
         const VK_TOKEN = 'vk1.a.AlJYKCT2zNGQIeo-5JKGu5d4XvvdNJ3nGJyjWUgFu-aQ1hiDuoB2Y1JC3jEU2XewGeBkge0O-xbq2heUVUtQ6VemC9sSW_kaNR4Fabtkqf8Yp-LFfvMK5hiut17ntKFd6zi5zgJNyWXpbzQ1evlvGnkx9PfIZQmijaEaZUKGZiDSrJuDne-BTqayawX8e-N9B-yxHkmtzPWDddiBLhsMeQ';
         const VK_USER_ID = '547773543';
         const STORAGE_KEY = 'vrhouse_data';
-        const HOURLY_RATE = 100; // 100 ₽ в час
+        const HOURLY_RATE = 100;
 
+        // ═══════════════════════════════════
+        // ДАННЫЕ
+        // ═══════════════════════════════════
         function loadData() { const s=localStorage.getItem(STORAGE_KEY); if(s){try{return JSON.parse(s);}catch(e){}} return null; }
-        function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ equipment:Equipment, issues:{list:Issues.list, nextId:Issues.nextId}, shift:Shift })); }
+        function saveData() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ equipment:Equipment, issues:{list:Issues.list, nextId:Issues.nextId}, shift:Shift, moves:MoveData.list })); }
 
         const saved = loadData();
-        let Equipment, Issues, Shift;
-        if(saved && saved.equipment) { Equipment=saved.equipment; Issues=saved.issues; Shift=saved.shift; }
-        else {
-            Equipment={helmets:[],other:[]}; Issues={list:[],nextId:1}; Shift={active:false,staffName:'',startTime:null,history:[]};
-            for(let i=1;i<=13;i++) Equipment.helmets.push({id:'h'+i,name:'VR-шлем '+i,type:'vr',icon:'fa-vr-cardboard',status:'ok'});
-            Equipment.other.push({id:'sim1',name:'Автосимулятор',icon:'fa-car',status:'ok'});
-            for(let i=1;i<=2;i++) Equipment.other.push({id:'xbox'+i,name:'Xbox '+i,icon:'fa-xbox',status:'ok'});
-            for(let i=1;i<=9;i++) Equipment.other.push({id:'btn'+i,name:'Кнопка '+i,icon:'fa-circle',status:'ok'});
-            for(let i=1;i<=2;i++) Equipment.other.push({id:'watch'+i,name:'Часы '+i,icon:'fa-clock',status:'ok'});
-            for(let i=1;i<=2;i++) Equipment.other.push({id:'psu'+i,name:'Блок питания ПК '+i,icon:'fa-plug',status:'ok'});
-            for(let i=1;i<=4;i++) Equipment.other.push({id:'mon'+i,name:'Монитор ПК '+i,icon:'fa-desktop',status:'ok'});
+        let Equipment, Issues, Shift, MoveData;
+        if(saved && saved.equipment) {
+            Equipment=saved.equipment; Issues=saved.issues; Shift=saved.shift;
+            MoveData = { list: saved.moves || [], nextId: (saved.moves?.length ? Math.max(...saved.moves.map(m=>m.id))+1 : 1) };
+        } else {
+            Equipment={helmets:[],other:[]}; Issues={list:[],nextId:1}; Shift={active:false,staffName:'',startTime:null,history:[]}; MoveData={list:[],nextId:1};
+            for(let i=1;i<=13;i++) Equipment.helmets.push({id:'h'+i,name:'VR-шлем '+i,type:'vr',icon:'fa-vr-cardboard',status:'ok',moveId:null});
+            Equipment.other.push({id:'sim1',name:'Автосимулятор',icon:'fa-car',status:'ok',moveId:null});
+            for(let i=1;i<=2;i++) Equipment.other.push({id:'xbox'+i,name:'Xbox '+i,icon:'fa-xbox',status:'ok',moveId:null});
+            for(let i=1;i<=9;i++) Equipment.other.push({id:'btn'+i,name:'Кнопка '+i,icon:'fa-circle',status:'ok',moveId:null});
+            for(let i=1;i<=2;i++) Equipment.other.push({id:'watch'+i,name:'Часы '+i,icon:'fa-clock',status:'ok',moveId:null});
+            for(let i=1;i<=2;i++) Equipment.other.push({id:'psu'+i,name:'Блок питания ПК '+i,icon:'fa-plug',status:'ok',moveId:null});
+            for(let i=1;i<=4;i++) Equipment.other.push({id:'mon'+i,name:'Монитор ПК '+i,icon:'fa-desktop',status:'ok',moveId:null});
             saveData();
         }
 
         const ISSUE_STATUSES = { open:{label:'Открыта',class:'badge-open'}, wait:{label:'В ожидании',class:'badge-wait'}, progress:{label:'В работе',class:'badge-progress'}, done:{label:'Готово',class:'badge-done'}, cantfix:{label:'Не починить',class:'badge-cantfix'} };
+        const MOVE_CATEGORIES = { park:{label:'Парк',class:'badge-park',icon:'fa-tree'}, event:{label:'Выездное мероприятие',class:'badge-event',icon:'fa-calendar-star'}, repair:{label:'Ремонт',class:'badge-repair',icon:'fa-tools'}, staff:{label:'Взял сотрудник',class:'badge-staff',icon:'fa-user'} };
         function getAllEquip(){return [...Equipment.helmets, ...Equipment.other];}
         function findEquip(id){return getAllEquip().find(e=>e.id===id);}
-        function getStats(){const a=getAllEquip();return{ok:a.filter(e=>e.status==='ok').length,issue:a.filter(e=>e.status==='issue').length,active:Issues.list.filter(i=>i.status!=='done'&&i.status!=='cantfix').length};}
-
-        // Расчёт: 0₽ + 100₽ × часы
-        function calcPay(startTime) {
-            if (!startTime) return 0;
-            const hours = Math.floor((new Date() - new Date(startTime)) / 3600000);
-            return hours * HOURLY_RATE;
+        function getEquipStatus(item) {
+            if(item.moveId) return 'moved';
+            if(item.status==='issue') return 'issue';
+            return 'ok';
         }
+        function getEquipStatusText(item) {
+            if(item.moveId) { const m=MoveData.list.find(mm=>mm.id===item.moveId); if(m) return MOVE_CATEGORIES[m.category]?.label||'ПЕРЕМЕЩЕНО'; return 'ПЕРЕМЕЩЕНО'; }
+            return item.status==='issue'?'ПРОБЛЕМА':'ИСПРАВНО';
+        }
+        function getStats(){const a=getAllEquip();return{ok:a.filter(e=>!e.moveId&&e.status==='ok').length,issue:a.filter(e=>!e.moveId&&e.status==='issue').length,moved:a.filter(e=>e.moveId).length,active:Issues.list.filter(i=>i.status!=='done'&&i.status!=='cantfix').length};}
 
+        // ═══════════════════════════════════
+        // ОПЛАТА
+        // ═══════════════════════════════════
+        function calcPay(startTime) { if(!startTime) return 0; return Math.floor((new Date() - new Date(startTime)) / 3600000) * HOURLY_RATE; }
+
+        // ═══════════════════════════════════
+        // ВК
+        // ═══════════════════════════════════
         async function sendVkMessage(issue) {
             const d=new Date(issue.date);
             const ds=d.toLocaleDateString('ru-RU')+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
@@ -161,84 +218,85 @@
                 const r=await fetch('https://api.vk.com/method/messages.send',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({user_id:VK_USER_ID,message:msg,random_id:Math.floor(Math.random()*99999999),access_token:VK_TOKEN,v:'5.199'})});
                 const data=await r.json();
                 if(data.response) { showToast('✅ Отправлено в ВК','success'); }
-                else if(data.error && data.error.error_code===901) { showToast('⚠ Напишите сообщение в сообщество ВК!','error'); }
+                else if(data.error?.error_code===901) { showToast('⚠ Напишите в сообщество ВК!','error'); }
                 else { showToast('⚠ Ошибка ВК','error'); }
             } catch(e) { showToast('⚠ Нет связи с ВК','error'); }
         }
 
+        // ═══════════════════════════════════
+        // ЛОГИКА
+        // ═══════════════════════════════════
         function startShift(name){if(!name.trim())return alert('Введите имя');Shift.active=true;Shift.staffName=name.trim();Shift.startTime=new Date().toISOString();closeModal('modalShiftStart');saveData();render();}
         function endShift(){const pay=calcPay(Shift.startTime);Shift.history.push({staffName:Shift.staffName,start:Shift.startTime,end:new Date().toISOString(),rate:pay});Shift.active=false;Shift.startTime=null;closeModal('modalShiftEnd');saveData();render();showToast('🔴 Смена завершена. К выплате: '+pay+' ₽','success');}
         function reportIssue(eid,type,desc,priority){if(!desc.trim())return alert('Опишите проблему');const item=findEquip(eid);if(item)item.status='issue';const issue={id:Issues.nextId++,equipId:eid,equipName:item?item.name:eid,type,desc,priority,status:'open',date:new Date().toISOString(),who:Shift.staffName||'Сотрудник'};Issues.list.push(issue);closeModal('modalReportIssue');saveData();render();sendVkMessage(issue);}
         function changeIssueStatus(id,ns){const issue=Issues.list.find(i=>i.id===id);if(!issue)return;issue.status=ns;const item=findEquip(issue.equipId);if(ns==='done'&&item)item.status='ok';if(ns==='cantfix'&&item)item.status='issue';if(ns==='open'&&item)item.status='issue';saveData();render();}
 
+        function moveEquipment(eid,category,desc,dateFrom,dateTo,time,timeBack,staffName,phone) {
+            if(!desc.trim())return alert('Добавьте описание');
+            const item=findEquip(eid);if(!item)return;
+            const move={id:MoveData.nextId++,equipId:eid,equipName:item.name,category,desc,dateFrom,dateTo,time,timeBack,staffName:staffName||'Не указан',phone:phone||'Не указан',createdAt:new Date().toISOString(),returned:false};
+            MoveData.list.push(move);
+            item.moveId=move.id;
+            closeModal('modalMoveEquipment');saveData();render();showToast('📦 Перемещение зафиксировано','success');
+        }
+
+        function returnEquipment(moveId) {
+            const move=MoveData.list.find(m=>m.id===moveId);if(!move)return;
+            const item=findEquip(move.equipId);if(item&&item.moveId===moveId)item.moveId=null;
+            move.returned=true;
+            closeModal('modalMoveDetail');saveData();render();showToast('🔄 Оборудование возвращено','success');
+        }
+
+        // ═══════════════════════════════════
+        // КАЛЕНДАРЬ
+        // ═══════════════════════════════════
         let calYear, calMonth;
         function renderCalendar() {
             const now = new Date();
-            if (!calYear) calYear = now.getFullYear();
-            if (!calMonth) calMonth = now.getMonth();
-            const months = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-            const days = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-            const firstDay = new Date(calYear, calMonth, 1);
-            const lastDay = new Date(calYear, calMonth+1, 0);
-            let startDow = firstDay.getDay(); if(startDow===0)startDow=7; startDow--;
-            const todayStr = now.toISOString().split('T')[0];
-
-            let h = `<div class="calendar-nav">
-                <button class="btn btn-outline btn-sm" onclick="calMonth--;if(calMonth<0){calMonth=11;calYear--;}render();"><i class="fas fa-chevron-left"></i></button>
-                <span class="month-label">${months[calMonth]} ${calYear}</span>
-                <button class="btn btn-outline btn-sm" onclick="calMonth++;if(calMonth>11){calMonth=0;calYear++;}render();"><i class="fas fa-chevron-right"></i></button>
-                <button class="btn btn-outline btn-sm" onclick="calYear=new Date().getFullYear();calMonth=new Date().getMonth();render();">Сегодня</button>
-            </div><div class="calendar-grid">`;
-            days.forEach(d => h += `<div class="calendar-day-header">${d}</div>`);
-            const prevLast = new Date(calYear, calMonth, 0).getDate();
-            for (let i=startDow-1; i>=0; i--) {
-                const d = prevLast - i;
-                const ds = `${calMonth===0?calYear-1:calYear}-${String(calMonth===0?12:calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const shifts = Shift.history.filter(s=>s.start&&s.start.startsWith(ds));
-                h += `<div class="calendar-day other-month"><div class="day-num">${d}</div>${shifts.map(()=>'<span class="shift-dot"></span>').join('')}</div>`;
-            }
-            for (let d=1; d<=lastDay.getDate(); d++) {
-                const ds = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-                const shifts = Shift.history.filter(s=>s.start&&s.start.startsWith(ds));
-                const isToday = ds === todayStr;
-                h += `<div class="calendar-day${isToday?' today':''}" onclick="showShiftsForDate('${ds}')"><div class="day-num">${d}</div>${shifts.map(()=>'<span class="shift-dot"></span>').join('')}</div>`;
-            }
-            const totalCells = startDow + lastDay.getDate();
-            const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
-            for (let d=1; d<=remaining; d++) {
-                h += `<div class="calendar-day other-month"><div class="day-num">${d}</div></div>`;
-            }
-            return h + '</div>';
+            if (!calYear) { calYear=now.getFullYear(); calMonth=now.getMonth(); }
+            const months=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+            const days=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+            const firstDay=new Date(calYear,calMonth,1),lastDay=new Date(calYear,calMonth+1,0);
+            let sd=firstDay.getDay();if(sd===0)sd=7;sd--;
+            const todayStr=now.toISOString().split('T')[0];
+            let h=`<div class="calendar-nav"><button class="btn btn-outline btn-sm" onclick="calMonth--;if(calMonth<0){calMonth=11;calYear--;}render();"><i class="fas fa-chevron-left"></i></button><span class="month-label">${months[calMonth]} ${calYear}</span><button class="btn btn-outline btn-sm" onclick="calMonth++;if(calMonth>11){calMonth=0;calYear++;}render();"><i class="fas fa-chevron-right"></i></button><button class="btn btn-outline btn-sm" onclick="calYear=new Date().getFullYear();calMonth=new Date().getMonth();render();">Сегодня</button></div><div class="calendar-grid">`;
+            days.forEach(d=>h+=`<div class="calendar-day-header">${d}</div>`);
+            const prevLast=new Date(calYear,calMonth,0).getDate();
+            for(let i=sd-1;i>=0;i--){const d=prevLast-i,ds=`${calMonth===0?calYear-1:calYear}-${String(calMonth===0?12:calMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const shifts=Shift.history.filter(s=>s.start?.startsWith(ds));h+=`<div class="calendar-day other-month"><div class="day-num">${d}</div>${shifts.map(()=>'<span class="shift-dot"></span>').join('')}</div>`;}
+            for(let d=1;d<=lastDay.getDate();d++){const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;const shifts=Shift.history.filter(s=>s.start?.startsWith(ds));const isToday=ds===todayStr;h+=`<div class="calendar-day${isToday?' today':''}" onclick="showShiftsForDate('${ds}')"><div class="day-num">${d}</div>${shifts.map(()=>'<span class="shift-dot"></span>').join('')}</div>`;}
+            const totalCells=sd+lastDay.getDate(),remaining=totalCells%7===0?0:7-(totalCells%7);
+            for(let d=1;d<=remaining;d++)h+=`<div class="calendar-day other-month"><div class="day-num">${d}</div></div>`;
+            return h+'</div>';
         }
 
-        function showShiftsForDate(ds) {
-            const shifts = Shift.history.filter(s=>s.start&&s.start.startsWith(ds));
-            if(shifts.length===0) return showToast('Нет смен на этот день','');
-            const list = shifts.map(s=>{
-                const start = new Date(s.start), end = new Date(s.end);
-                const hours = Math.floor((end-start)/3600000);
-                return `${s.staffName}: ${start.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} → ${end.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} (${hours} ч, ${s.rate} ₽)`;
-            }).join('\n');
-            alert('Смены на '+new Date(ds).toLocaleDateString('ru-RU')+':\n\n'+list);
+        function showShiftsForDate(ds){
+            const shifts=Shift.history.filter(s=>s.start?.startsWith(ds));
+            if(!shifts.length)return showToast('Нет смен','');
+            alert('Смены на '+new Date(ds).toLocaleDateString('ru-RU')+':\n\n'+shifts.map(s=>{const st=new Date(s.start),e=new Date(s.end);return`${s.staffName}: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} → ${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} (${Math.floor((e-st)/3600000)} ч, ${s.rate} ₽)`;}).join('\n'));
         }
 
-        function render() {
-            const tab=currentTab;
-            let h='';
-            switch(tab){case 'dashboard':h=renderDashboard();break;case 'shift':h=renderShiftTab();break;case 'calendar':h=renderCalendarTab();break;case 'helmets':h=renderHelmetsTab();break;case 'other':h=renderOtherTab();break;case 'issues':h=renderIssuesTab();break;case 'history':h=renderHistoryTab();break;}
+        // ═══════════════════════════════════
+        // РЕНДЕРИНГ
+        // ═══════════════════════════════════
+        function render(){
+            const tab=currentTab;let h='';
+            switch(tab){case 'dashboard':h=renderDashboard();break;case 'shift':h=renderShiftTab();break;case 'calendar':h=renderCalendarTab();break;case 'helmets':h=renderHelmetsTab();break;case 'other':h=renderOtherTab();break;case 'issues':h=renderIssuesTab();break;case 'moves':h=renderMovesTab();break;case 'history':h=renderHistoryTab();break;}
             document.getElementById('mainContent').innerHTML=h;updateBadges();updateClock();
         }
 
-        function renderCard(item){return `<div class="eq-card ${item.status==='issue'?'issue':'ok'}" onclick="openIssueFor('${item.id}')"><i class="fas ${item.icon}"></i><div class="eq-name">${item.name}</div><div class="eq-status">${item.status==='issue'?'ПРОБЛЕМА':'ИСПРАВНО'}</div></div>`;}
+        function renderCard(item){
+            const st=getEquipStatus(item),txt=getEquipStatusText(item);
+            return `<div class="eq-card ${st}" onclick="${item.moveId?`showMoveDetail(${item.moveId})`:`openMoveFor('${item.id}')`}" title="${item.moveId?'Нажмите для деталей перемещения':'Переместить'}"><i class="fas ${item.icon}"></i><div class="eq-name">${item.name}</div><div class="eq-status">${txt}</div></div>`;
+        }
 
         function renderDashboard(){
-            const s=getStats();
-            const pay = Shift.active ? calcPay(Shift.startTime) : 0;
-            return `<div class="topbar"><h1>📊 Дашборд</h1><div class="topbar-right"><span class="live-clock" id="liveClock"></span>${Shift.active?`<button class="btn btn-red" onclick="openShiftEnd()"><i class="fas fa-door-open"></i> Завершить (${pay} ₽)</button>`:'<button class="btn btn-purple" onclick="openShiftStart()"><i class="fas fa-user-check"></i> Начать смену</button>'}</div></div>
+            const s=getStats(),pay=Shift.active?calcPay(Shift.startTime):0;
+            return`<div class="topbar"><h1>📊 Дашборд</h1><div class="topbar-right"><span class="live-clock" id="liveClock"></span>${Shift.active?`<button class="btn btn-red" onclick="openShiftEnd()"><i class="fas fa-door-open"></i> Завершить (${pay} ₽)</button>`:'<button class="btn btn-purple" onclick="openShiftStart()"><i class="fas fa-user-check"></i> Начать смену</button>'}</div></div>
             <div class="summary">
                 <div class="summary-card sc-green"><div class="sc-icon"><i class="fas fa-check-circle"></i></div><div class="sc-val">${s.ok}</div><div class="sc-label">Исправно</div></div>
                 <div class="summary-card sc-yellow"><div class="sc-icon"><i class="fas fa-exclamation-triangle"></i></div><div class="sc-val">${s.issue}</div><div class="sc-label">Проблем</div></div>
-                <div class="summary-card"><div class="sc-icon" style="color:var(--red)"><i class="fas fa-bug"></i></div><div class="sc-val">${s.active}</div><div class="sc-label">Активных</div></div>
+                <div class="summary-card"><div class="sc-icon" style="color:var(--blue)"><i class="fas fa-truck"></i></div><div class="sc-val">${s.moved}</div><div class="sc-label">Перемещено</div></div>
+                <div class="summary-card"><div class="sc-icon" style="color:var(--red)"><i class="fas fa-bug"></i></div><div class="sc-val">${s.active}</div><div class="sc-label">Активных заявок</div></div>
                 <div class="summary-card sc-blue"><div class="sc-icon"><i class="fas fa-ruble-sign"></i></div><div class="sc-val">${HOURLY_RATE} ₽/ч</div><div class="sc-label">Ставка</div></div>
             </div>
             ${Shift.active?`<div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p style="color:var(--muted);">${Shift.staffName} • ${new Date(Shift.startTime).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})} • К выплате: ${pay} ₽</p></div>`:''}
@@ -247,38 +305,56 @@
         }
 
         function renderShiftTab(){
-            if(!Shift.active) return `<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block inactive"><div class="shift-status-icon" style="font-size:64px;">⏰</div><div class="shift-status-text">Смена не начата</div><p style="color:var(--green);">Оплата: ${HOURLY_RATE} ₽/час</p><button class="btn btn-purple" onclick="openShiftStart()">Начать смену</button></div>`;
-            const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000);
-            const pay=calcPay(Shift.startTime);
-            return `<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Прошло: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p><button class="btn btn-red" onclick="openShiftEnd()">Завершить</button></div>`;
+            if(!Shift.active)return`<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block inactive"><div class="shift-status-icon" style="font-size:64px;">⏰</div><div class="shift-status-text">Смена не начата</div><p style="color:var(--green);">Оплата: ${HOURLY_RATE} ₽/час</p><button class="btn btn-purple" onclick="openShiftStart()">Начать смену</button></div>`;
+            const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000),pay=calcPay(Shift.startTime);
+            return`<div class="topbar"><h1>🕒 Моя смена</h1></div><div class="shift-block active"><div class="shift-status-icon">🟢</div><div class="shift-status-text">Смена активна</div><p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Прошло: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p><button class="btn btn-red" onclick="openShiftEnd()">Завершить</button></div>`;
         }
 
-        function renderCalendarTab(){return`<div class="topbar"><h1>📅 Календарь смен</h1></div>${renderCalendar()}<div class="section-title"><i class="fas fa-list"></i> Последние смены</div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>${[...Shift.history].reverse().slice(0,20).map(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const h=Math.floor((e-s)/3600000);return`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${h} ч</td><td>${sh.rate} ₽</td></tr>`;}).join('')||'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Нет смен</td></tr>'}</tbody></table></div>`;}
+        function renderCalendarTab(){return`<div class="topbar"><h1>📅 Календарь смен</h1></div>${renderCalendar()}<div class="section-title"><i class="fas fa-list"></i> Последние смены</div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>${[...Shift.history].reverse().slice(0,20).map(sh=>{const s=new Date(sh.start),e=new Date(sh.end);return`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${Math.floor((e-s)/3600000)} ч</td><td>${sh.rate} ₽</td></tr>`;}).join('')||'<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Нет смен</td></tr>'}</tbody></table></div>`;}
         function renderHelmetsTab(){return'<div class="topbar"><h1>🔮 VR-шлемы</h1></div><div class="eq-grid">'+Equipment.helmets.map(renderCard).join('')+'</div>';}
         function renderOtherTab(){return'<div class="topbar"><h1>🕹 Остальное</h1></div><div class="eq-grid">'+Equipment.other.map(renderCard).join('')+'</div>';}
+        function renderIssuesTab(){
+            const list=[...Issues.list].reverse();
+            let h='<div class="topbar"><h1>📋 Журнал проблем</h1><button class="btn btn-red" onclick="openIssueFor(null)"><i class="fas fa-plus"></i> Новая проблема</button></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Оборудование</th><th>Тип</th><th>Срочность</th><th>Статус</th><th>Дата</th><th></th></tr></thead><tbody>';
+            if(!list.length)h+='<tr><td colspan="7" style="color:var(--green);text-align:center;padding:20px;">✅ Проблем нет</td></tr>';
+            else list.forEach(iss=>{const d=new Date(iss.date),st=ISSUE_STATUSES[iss.status]||ISSUE_STATUSES['open'];let btns='';if(iss.status==='open')btns=`<button class="btn btn-yellow btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'wait')">🟡</button><button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='wait')btns=`<button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='progress')btns=`<button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else btns=`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'open')">🔄</button>`;h+=`<tr><td>#${iss.id}</td><td><strong>${iss.equipName}</strong></td><td>${iss.type}</td><td>${iss.priority}</td><td><span class="badge ${st.class}">${st.label}</span></td><td>${d.toLocaleDateString('ru-RU')}</td><td><div style="display:flex;gap:4px;">${btns}</div></td></tr>`;});
+            return h+'</tbody></table></div>';
+        }
 
-        function renderIssuesTab(){const list=[...Issues.list].reverse();let h='<div class="topbar"><h1>📋 Журнал проблем</h1><button class="btn btn-red" onclick="openIssueFor(null)"><i class="fas fa-plus"></i> Новая проблема</button></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Оборудование</th><th>Тип</th><th>Срочность</th><th>Статус</th><th>Дата</th><th></th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="7" style="color:var(--green);text-align:center;padding:20px;">✅ Проблем нет</td></tr>';else list.forEach(iss=>{const d=new Date(iss.date),st=ISSUE_STATUSES[iss.status]||ISSUE_STATUSES['open'];let btns='';if(iss.status==='open')btns=`<button class="btn btn-yellow btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'wait')">🟡</button><button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='wait')btns=`<button class="btn btn-blue btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'progress')">🔵</button><button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else if(iss.status==='progress')btns=`<button class="btn btn-green btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'done')">🟢</button><button class="btn btn-red btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'cantfix')">⛔</button>`;else btns=`<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();changeIssueStatus(${iss.id},'open')">🔄</button>`;h+=`<tr><td>#${iss.id}</td><td><strong>${iss.equipName}</strong></td><td>${iss.type}</td><td>${iss.priority}</td><td><span class="badge ${st.class}">${st.label}</span></td><td>${d.toLocaleDateString('ru-RU')}</td><td><div style="display:flex;gap:4px;">${btns}</div></td></tr>`;});return h+'</tbody></table></div>';}
+        function renderMovesTab(){
+            const list=[...MoveData.list].reverse();
+            let h='<div class="topbar"><h1>📦 Перемещения</h1><button class="btn btn-blue" onclick="openMoveFor(null)"><i class="fas fa-truck"></i> Новое перемещение</button></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Оборудование</th><th>Категория</th><th>Описание</th><th>Даты</th><th>Сотрудник</th><th>Телефон</th><th></th></tr></thead><tbody>';
+            if(!list.length)h+='<tr><td colspan="8" style="color:var(--green);text-align:center;padding:20px;">✅ Нет активных перемещений</td></tr>';
+            else list.forEach(m=>{const cat=MOVE_CATEGORIES[m.category]||{};h+=`<tr style="${m.returned?'opacity:0.5':''}"><td>#${m.id}</td><td><strong>${m.equipName}</strong></td><td><span class="badge ${cat.class}">${cat.label}</span></td><td>${m.desc.substring(0,30)}${m.desc.length>30?'...':''}</td><td>${m.dateFrom||'?'} → ${m.dateTo||'?'}</td><td>${m.staffName}</td><td>${m.phone}</td><td><button class="btn btn-outline btn-sm" onclick="showMoveDetail(${m.id})">📄</button>${!m.returned?`<button class="btn btn-green btn-sm" onclick="returnEquipment(${m.id})" style="margin-left:4px;">🔄</button>`:'<span style="color:var(--green);margin-left:4px;">✓</span>'}</td></tr>`;});
+            return h+'</tbody></table></div>';
+        }
 
-        function renderHistoryTab(){const list=[...Shift.history].reverse();let h='<div class="topbar"><h1>📜 История смен</h1></div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Пусто</td></tr>';else list.forEach(sh=>{const s=new Date(sh.start),e=new Date(sh.end);const hrs=Math.floor((e-s)/3600000);h+=`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${hrs} ч</td><td>${sh.rate} ₽</td></tr>`;});return h+'</tbody></table></div>';}
+        function renderHistoryTab(){const list=[...Shift.history].reverse();let h='<div class="topbar"><h1>📜 История смен</h1></div><div class="table-wrap"><table><thead><tr><th>Сотрудник</th><th>Дата</th><th>Начало</th><th>Конец</th><th>Часов</th><th>Сумма</th></tr></thead><tbody>';if(!list.length)h+='<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px;">Пусто</td></tr>';else list.forEach(sh=>{const s=new Date(sh.start),e=new Date(sh.end);h+=`<tr><td><strong>${sh.staffName}</strong></td><td>${s.toLocaleDateString('ru-RU')}</td><td>${s.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${e.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</td><td>${Math.floor((e-s)/3600000)} ч</td><td>${sh.rate} ₽</td></tr>`;});return h+'</tbody></table></div>';}
 
+        // ═══════════════════════════════════
+        // МОДАЛКИ
+        // ═══════════════════════════════════
         function showToast(msg,type){const old=document.querySelector('.toast');if(old)old.remove();const t=document.createElement('div');t.className='toast '+type;t.innerHTML=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000);}
         function openModal(id){document.getElementById(id).classList.remove('hidden');}
         function closeModal(id){document.getElementById(id).classList.add('hidden');}
         function openShiftStart(){document.getElementById('inputStaffName').value=Shift.staffName||'';openModal('modalShiftStart');}
-        function openShiftEnd(){const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000);const pay=calcPay(Shift.startTime);document.getElementById('shiftEndInfo').innerHTML=`<p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Отработано: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p>`;openModal('modalShiftEnd');}
-        function openIssueFor(equipId){const sel=document.getElementById('selectIssueEquipment');sel.innerHTML='';getAllEquip().forEach(item=>{const o=document.createElement('option');o.value=item.id;o.textContent=item.name+(item.status==='issue'?' ⚠':'');if(item.id===equipId)o.selected=true;sel.appendChild(o);});document.getElementById('inputIssueDesc').value='';openModal('modalReportIssue');}
+        function openShiftEnd(){const st=new Date(Shift.startTime),diff=Math.floor((new Date()-st)/60000),pay=calcPay(Shift.startTime);document.getElementById('shiftEndInfo').innerHTML=`<p><strong>${Shift.staffName}</strong></p><p>Начало: ${st.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}</p><p>Отработано: ${Math.floor(diff/60)} ч ${diff%60} мин</p><p style="color:var(--green);font-size:18px;">К выплате: ${pay} ₽</p>`;openModal('modalShiftEnd');}
+        function openIssueFor(equipId){const sel=document.getElementById('selectIssueEquipment');sel.innerHTML='';getAllEquip().filter(e=>!e.moveId).forEach(item=>{const o=document.createElement('option');o.value=item.id;o.textContent=item.name+(item.status==='issue'?' ⚠':'');if(item.id===equipId)o.selected=true;sel.appendChild(o);});document.getElementById('inputIssueDesc').value='';openModal('modalReportIssue');}
         function submitIssue(){reportIssue(document.getElementById('selectIssueEquipment').value,document.getElementById('selectIssueType').value,document.getElementById('inputIssueDesc').value,document.getElementById('selectIssuePriority').value);}
+        function openMoveFor(equipId){const sel=document.getElementById('selectMoveEquipment');sel.innerHTML='';getAllEquip().forEach(item=>{const o=document.createElement('option');o.value=item.id;o.textContent=item.name+(item.moveId?' (уже перемещено)':'');if(item.id===equipId)o.selected=true;sel.appendChild(o);});document.getElementById('inputMoveDesc').value='';document.getElementById('inputMoveDateFrom').value='';document.getElementById('inputMoveDateTo').value='';document.getElementById('inputMoveTime').value='12:00';document.getElementById('inputMoveTimeBack').value='18:00';document.getElementById('inputMoveStaffName').value=Shift.staffName||'';document.getElementById('inputMovePhone').value='';openModal('modalMoveEquipment');}
+        function submitMove(){moveEquipment(document.getElementById('selectMoveEquipment').value,document.getElementById('selectMoveCategory').value,document.getElementById('inputMoveDesc').value,document.getElementById('inputMoveDateFrom').value,document.getElementById('inputMoveDateTo').value,document.getElementById('inputMoveTime').value,document.getElementById('inputMoveTimeBack').value,document.getElementById('inputMoveStaffName').value,document.getElementById('inputMovePhone').value);}
+        function showMoveDetail(id){const m=MoveData.list.find(mm=>mm.id===id);if(!m)return;const cat=MOVE_CATEGORIES[m.category]||{};document.getElementById('modalMoveDetailTitle').textContent='Перемещение #'+m.id;document.getElementById('modalMoveDetailBody').innerHTML=`<p><b>Оборудование:</b> ${m.equipName}</p><p><b>Категория:</b> <span class="badge ${cat.class}">${cat.label}</span></p><p><b>Описание:</b> ${m.desc}</p><p><b>Даты:</b> ${m.dateFrom||'?'} → ${m.dateTo||'?'}</p><p><b>Время:</b> ${m.time||'?'} — ${m.timeBack||'?'}</p><p><b>Сотрудник:</b> ${m.staffName}</p><p><b>Телефон:</b> ${m.phone}</p><p><b>Статус:</b> ${m.returned?'✅ Возвращено':'📦 В перемещении'}</p>`;document.getElementById('btnReturnEquipment').style.display=m.returned?'none':'inline-flex';document.getElementById('btnReturnEquipment').onclick=()=>returnEquipment(m.id);openModal('modalMoveDetail');}
 
         let currentTab='dashboard';
         function switchTab(tab){currentTab=tab;document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));const item=document.querySelector(`[data-tab="${tab}"]`);if(item)item.classList.add('active');render();}
         function updateBadges(){const active=Issues.list.filter(i=>i.status!=='done'&&i.status!=='cantfix').length;const badge=document.getElementById('badgeIssues');if(badge){badge.textContent=active;badge.style.display=active>0?'inline':'none';}}
         function updateClock(){const el=document.getElementById('liveClock');if(el)el.textContent=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit',second:'2-digit'});}
 
-        function buildSidebar(){document.getElementById('sidebar').innerHTML=`<div class="logo"><i class="fas fa-vr-cardboard"></i><span>VR HOUSE</span></div><div class="nav-label">Сотрудник</div><div class="nav-item active" data-tab="dashboard"><i class="fas fa-th-large"></i><span>Дашборд</span></div><div class="nav-item" data-tab="shift"><i class="fas fa-user-clock"></i><span>Моя смена</span></div><div class="nav-item" data-tab="calendar"><i class="fas fa-calendar-alt"></i><span>Календарь смен</span></div><div class="nav-label">Оборудование</div><div class="nav-item" data-tab="helmets"><i class="fas fa-head-side-virus"></i><span>VR-шлемы</span><span class="nav-badge">13</span></div><div class="nav-item" data-tab="other"><i class="fas fa-gamepad"></i><span>Остальное</span><span class="nav-badge">20</span></div><div class="nav-label">Проблемы</div><div class="nav-item" data-tab="issues"><i class="fas fa-exclamation-triangle"></i><span>Журнал проблем</span><span class="nav-badge warn" id="badgeIssues">0</span></div><div class="nav-label">Система</div><div class="nav-item" data-tab="history"><i class="fas fa-history"></i><span>История смен</span></div>`;document.querySelectorAll('.nav-item').forEach(item=>{item.addEventListener('click',function(){const tab=this.dataset.tab;if(tab)switchTab(tab);});});}
+        function buildSidebar(){document.getElementById('sidebar').innerHTML=`<div class="logo"><i class="fas fa-vr-cardboard"></i><span>VR HOUSE</span></div><div class="nav-label">Сотрудник</div><div class="nav-item active" data-tab="dashboard"><i class="fas fa-th-large"></i><span>Дашборд</span></div><div class="nav-item" data-tab="shift"><i class="fas fa-user-clock"></i><span>Моя смена</span></div><div class="nav-item" data-tab="calendar"><i class="fas fa-calendar-alt"></i><span>Календарь смен</span></div><div class="nav-label">Оборудование</div><div class="nav-item" data-tab="helmets"><i class="fas fa-head-side-virus"></i><span>VR-шлемы</span><span class="nav-badge">13</span></div><div class="nav-item" data-tab="other"><i class="fas fa-gamepad"></i><span>Остальное</span><span class="nav-badge">20</span></div><div class="nav-label">Учёт</div><div class="nav-item" data-tab="moves"><i class="fas fa-truck"></i><span>Перемещения</span></div><div class="nav-item" data-tab="issues"><i class="fas fa-exclamation-triangle"></i><span>Журнал проблем</span><span class="nav-badge warn" id="badgeIssues">0</span></div><div class="nav-label">Система</div><div class="nav-item" data-tab="history"><i class="fas fa-history"></i><span>История смен</span></div>`;document.querySelectorAll('.nav-item').forEach(item=>{item.addEventListener('click',function(){const tab=this.dataset.tab;if(tab)switchTab(tab);});});}
 
-        setInterval(()=>{if(Shift.active && (currentTab==='dashboard'||currentTab==='shift')) render();}, 60000);
+        setInterval(()=>{if(Shift.active&&(currentTab==='dashboard'||currentTab==='shift'))render();},60000);
 
-        function init(){buildSidebar();document.getElementById('btnStartShift').onclick=()=>startShift(document.getElementById('inputStaffName').value);document.getElementById('btnCancelShift').onclick=()=>closeModal('modalShiftStart');document.getElementById('btnConfirmShiftEnd').onclick=endShift;document.getElementById('btnCancelShiftEnd').onclick=()=>closeModal('modalShiftEnd');document.getElementById('btnSubmitIssue').onclick=submitIssue;document.getElementById('btnCancelIssue').onclick=()=>closeModal('modalReportIssue');document.querySelectorAll('.modal-overlay').forEach(ov=>ov.onclick=function(e){if(e.target===this)this.classList.add('hidden');});document.onkeydown=function(e){if(e.key==='Escape')document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));};switchTab('dashboard');setInterval(updateClock,1000);}
+        function init(){buildSidebar();document.getElementById('btnStartShift').onclick=()=>startShift(document.getElementById('inputStaffName').value);document.getElementById('btnCancelShift').onclick=()=>closeModal('modalShiftStart');document.getElementById('btnConfirmShiftEnd').onclick=endShift;document.getElementById('btnCancelShiftEnd').onclick=()=>closeModal('modalShiftEnd');document.getElementById('btnSubmitIssue').onclick=submitIssue;document.getElementById('btnCancelIssue').onclick=()=>closeModal('modalReportIssue');document.getElementById('btnSubmitMove').onclick=submitMove;document.getElementById('btnCancelMove').onclick=()=>closeModal('modalMoveEquipment');document.getElementById('btnCloseMoveDetail').onclick=()=>closeModal('modalMoveDetail');document.querySelectorAll('.modal-overlay').forEach(ov=>ov.onclick=function(e){if(e.target===this)this.classList.add('hidden');});document.onkeydown=function(e){if(e.key==='Escape')document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.add('hidden'));};switchTab('dashboard');setInterval(updateClock,1000);}
         document.addEventListener('DOMContentLoaded',init);
     </script>
 </body>
